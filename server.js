@@ -84,15 +84,7 @@ class GameRoom {
         const player = this.players.get(playerId);
         if (!player || player.eliminated || !this.gameState.gameActive) return null;
 
-        // Check if it's the correct sequential number
-        if (number !== this.gameState.nextExpectedNumber) {
-            return {
-                type: 'wrong_sequence',
-                player: player,
-                expectedNumber: this.gameState.nextExpectedNumber,
-                actualNumber: number
-            };
-        }
+        
 
         const violation = this.checkNumberViolation(number);
         
