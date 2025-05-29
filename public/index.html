@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <title>Online Number Challenge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 8px 32px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            max-width: 1200px;
+            width: 95%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #fff, #ffd700, #ff6b6b);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .game-setup {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .setup-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .setup-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .setup-card:hover::before {
+            left: 100%;
+        }
+
+        .setup-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .setup-card h3 {
+            margin-bottom: 20px;
+            color: #ffd700;
+            font-size: 1.4em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95em;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 15px 20px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input, select {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.3);
+            transform: translateY(-2px);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        button {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+            transition: left 0.3s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        }
+
+        .secondary-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        }
+
+        .success-btn {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        }
+
+        .danger-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #e55353 100%);
+        }
+
+        .game-area {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .room-info {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .room-code {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #ffd700;
+            margin: 15px 0;
+            letter-spacing: 8px;
+            text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .game-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .info-card strong {
+            display: block;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-card div {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #4ecdc4;
+        }
+
+        .players-list {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .players-list h3 {
+            margin-bottom: 20px;
+            color: #ffd700;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .player:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        .player.active {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.2) 100%);
+            border: 2px solid #ffd700;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+            70% { 
+                box-shadow: 0 0 0 15px rgba(255, 215, 0, 0);
+            }
+            100% { 
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+                transform: scale(1);
+            }
+        }
+
+        .player.eliminated {
+            opacity: 0.5;
+            text-decoration: line-through;
+            background: rgba(255, 107, 107, 0.2);
+        }
+
+        .player.host::before {
+            content: '👑';
+            margin-right: 10px;
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .player-score {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .host-controls {
+            display: none;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .host-controls button {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .game-input {
+            display: none;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: stretch;
+        }
+
+        .game-input input {
+            flex: 2;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .game-input button {
+            flex: 1;
+            font-size: 1.1em;
+            min-width: 120px;
+        }
+
+        .messages {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 16px;
+            max-height: 250px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .message {
+            margin: 8px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            animation: slideInMessage 0.3s ease-out;
+            border-left: 3px solid transparent;
+        }
+
+        @keyframes slideInMessage {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message.system {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border-left-color: #ffd700;
+        }
+
+        .message.player {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border-left-color: #4caf50;
+        }
+
+        .message.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ff6b6b;
+            border-left-color: #f44336;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.connected {
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+        }
+
+        .connection-status.connecting {
+            background: rgba(255, 193, 7, 0.8);
+            color: white;
+        }
+
+        .waiting-message {
+            text-align: center;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            margin: 30px 0;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        .join-room-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .join-room-input input {
+            flex: 2;
+            text-transform: uppercase;
+        }
+
+        .join-room-input button {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .rules-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .rules-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rules-list li:last-child {
+            border-bottom: none;
+        }
+
+        .rules-list li::before {
+            content: '▶';
+            color: #4ecdc4;
+            font-size: 0.8em;
+        }
+
+        @media (max-width: 1024px) {
+            .game-container {
+                padding: 30px;
+                margin: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.8em;
+            }
+            
+            .game-setup {
+                grid-template-columns: 1fr;
+            }
+
+            .game-info {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+
+            .room-code {
+                font-size: 2em;
+                letter-spacing: 4px;
+            }
+
+            .game-info {
+                grid-template-columns: 1fr;
+            }
+
+            .game-input {
+                flex-direction: column;
+            }
+
+            .host-controls {
+                flex-direction: column;
+            }
+        }
+
+        .floating-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shape:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            top: 60%;
+            left: 80%;
+            animation-delay: 2s;
+        }
+
+        .shape:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            top: 80%;
+            left: 20%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <div class="connection-status disconnected" id="connectionStatus">
+        🔴 Disconnected
+    </div>
+
+    <div class="game-container">
+        <div class="header">
+            <h1>🎯 Online Number Challenge</h1>
+            <p>Count in sequence and avoid the forbidden number!</p>
+        </div>
+
+        <!-- Game Setup -->
+        <div class="game-setup" id="gameSetup">
+            <div class="setup-card">
+                <h3>🎮 Create Room</h3>
+                <div class="input-group">
+                    <label class="input-label">Your Name:</label>
+                    <input type="text" id="playerName" placeholder="Enter your name" maxlength="15">
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Forbidden Number:</label>
+                    <input type="number" id="forbiddenNumber" value="5" min="2" max="9">
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Max Players:</label>
+                    <select id="maxPlayers">
+                        <option value="4">4 Players</option>
+                        <option value="6">6 Players</option>
+                        <option value="8" selected>8 Players</option>
+                    </select>
+                </div>
+                
+                <button class="primary-btn" onclick="createRoom()">🚀 Create Room</button>
+            </div>
+
+            <div class="setup-card">
+                <h3>🔗 Join Room</h3>
+                <div class="input-group">
+                    <label class="input-label">Your Name:</label>
+                    <input type="text" id="joinPlayerName" placeholder="Enter your name" maxlength="15">
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Room Code:</label>
+                    <div class="join-room-input">
+                        <input type="text" id="roomCodeInput" placeholder="ABC123" maxlength="6">
+                        <button class="secondary-btn" onclick="joinRoom()" id="joinBtn">Join</button>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-card">
+                <h3>📖 How to Play</h3>
+                <ul class="rules-list">
+                    <li>Players take turns counting: 1, 2, 3, 4, 6, 7...</li>
+                    <li>Skip the forbidden number and its multiples</li>
+                    <li>Skip numbers containing the forbidden digit</li>
+                    <li>Say the wrong number = You're out!</li>
+                    <li>Last player standing wins!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Game Area -->
+        <div class="game-area" id="gameArea">
+            <div class="room-info">
+                <h3>🏠 Room</h3>
+                <div class="room-code" id="displayRoomCode">------</div>
+                <p>Share this code with friends to join!</p>
+            </div>
+
+            <div class="game-info">
+                <div class="info-card">
+                    <strong>Forbidden Number</strong>
+                    <div id="displayForbiddenNumber">5</div>
+                </div>
+                <div class="info-card">
+                    <strong>Current Turn</strong>
+                    <div id="currentTurn">Waiting...</div>
+                </div>
+                <div class="info-card">
+                    <strong>Round</strong>
+                    <div id="roundCounter">1</div>
+                </div>
+                <div class="info-card">
+                    <strong>Next Number</strong>
+                    <div id="nextNumber">1</div>
+                </div>
+            </div>
+
+            <div class="players-list">
+                <h3>👥 Players (<span id="playerCount">0</span>)</h3>
+                <div id="playersList"></div>
+            </div>
+
+            <div class="host-controls" id="hostControls">
+                <button class="success-btn" onclick="startGame()" id="startGameBtn">▶️ Start Game</button>
+                <button class="secondary-btn" onclick="resetGame()" id="resetGameBtn">🔄 Reset Game</button>
+            </div>
+
+            <div id="waitingMessage" class="waiting-message">
+                Waiting for players to join...
+            </div>
+
+            <div class="game-input" id="gameInput">
+                <input type="number" id="numberInput" placeholder="Enter the next number..." min="1">
+                <button class="primary-btn" onclick="submitNumber()" id="submitBtn">Submit</button>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+            <button class="danger-btn" onclick="leaveRoom()">🚪 Leave Room</button>
+        </div>
+    </div>
+
+    <script>
+    // Real socket.io connection
+    let socket = io();
+
+    let gameState = {
+        isHost: false,
+        roomCode: null,
+        players: [],
+        currentPlayer: null,
+        gameActive: false
+    };
+
+    function createRoom() {
+        const playerName = document.getElementById('playerName').value.trim();
+        const forbiddenNumber = parseInt(document.getElementById('forbiddenNumber').value);
+        const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+
+        if (!playerName) {
+            addMessage('Please enter your name', 'error');
+            return;
+        }
+
+        socket.emit('create_room', {
+            player: { name: playerName },
+            settings: { forbiddenNumber, maxPlayers }
+        });
+    }
+
+    function joinRoom() {
+        const playerName = document.getElementById('joinPlayerName').value.trim();
+        const roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+
+        if (!playerName || !roomCode) {
+            addMessage('Please enter your name and room code', 'error');
+            return;
+        }
+
+        socket.emit('join_room', {
+            roomCode: roomCode,
+            player: { name: playerName }
+        });
+    }
+
+    function showGameArea(data) {
+        document.getElementById('gameSetup').style.display = 'none';
+        document.getElementById('gameArea').style.display = 'block';
+        
+        document.getElementById('displayRoomCode').textContent = data.roomCode;
+        if (data.gameState && data.gameState.forbiddenNumber) {
+            document.getElementById('displayForbiddenNumber').textContent = data.gameState.forbiddenNumber;
+        }
+        
+        updatePlayersDisplay(data.players);
+        updateHostControls();
+        updateWaitingMessage(data.players);
+    }
+
+    function updatePlayersDisplay(players) {
+        const playersList = document.getElementById('playersList');
+        const playerCount = document.getElementById('playerCount');
+        
+        if (!players) players = [];
+        
+        playerCount.textContent = players.length;
+        playersList.innerHTML = '';
+        
+        players.forEach(player => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'player';
+            if (player.isHost) playerDiv.classList.add('host');
+            if (player.eliminated) playerDiv.classList.add('eliminated');
+            if (gameState.currentPlayer && player.id === gameState.currentPlayer.id) {
+                playerDiv.classList.add('active');
+            }
+            
+            playerDiv.innerHTML = `
+                <span class="player-name">${player.name}</span>
+                <span class="player-score">Score: ${player.score || 0}</span>
+            `;
+            
+            playersList.appendChild(playerDiv);
+        });
+    }
+
+    function updateHostControls() {
+        const hostControls = document.getElementById('hostControls');
+        if (hostControls && gameState.isHost) {
+            hostControls.style.display = 'flex';
+        }
+    }
+
+    function updateGameDisplay(data) {
+        if (!data) return;
+        
+        const currentTurnEl = document.getElementById('currentTurn');
+        const roundCounterEl = document.getElementById('roundCounter');
+        const nextNumberEl = document.getElementById('nextNumber');
+        
+        if (currentTurnEl) {
+            currentTurnEl.textContent = (data.currentPlayer && data.currentPlayer.name) ? data.currentPlayer.name : 'Waiting...';
+        }
+        
+        if (roundCounterEl && data.gameState) {
+            roundCounterEl.textContent = data.gameState.round || 1;
+        }
+        
+        if (nextNumberEl && data.gameState) {
+            nextNumberEl.textContent = data.gameState.nextExpectedNumber || 1;
+        }
+        
+        if (data.players) {
+            updatePlayersDisplay(data.players);
+        }
+    }
+
+    function startGame() {
+        socket.emit('start_game');
+    }
+
+    function resetGame() {
+        socket.emit('reset_game');
+    }
+
+    function submitNumber() {
+        const numberInput = document.getElementById('numberInput');
+        const number = parseInt(numberInput.value);
+        
+        if (!number || number < 1) {
+            addMessage('Please enter a valid number', 'error');
+            return;
+        }
+        
+        socket.emit('submit_number', { number: number });
+        numberInput.value = '';
+    }
+
+    function leaveRoom() {
+        if (socket && socket.connected) {
+            socket.disconnect();
+        }
+        location.reload();
+    }
+
+    function addMessage(text, type = 'system') {
+        const messages = document.getElementById('messages');
+        if (!messages) return;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = `${new Date().toLocaleTimeString()}: ${text}`;
+        messages.appendChild(messageDiv);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function updateConnectionStatus(status, text) {
+        const statusDiv = document.getElementById('connectionStatus');
+        if (statusDiv) {
+            statusDiv.className = `connection-status ${status}`;
+            statusDiv.textContent = text;
+        }
+    }
+
+    function updateWaitingMessage(players) {
+        const waitingMessage = document.getElementById('waitingMessage');
+        if (!waitingMessage) return;
+        
+        if (!players || players.length < 2) {
+            waitingMessage.style.display = 'block';
+            waitingMessage.textContent = `Waiting for players to join... (${players ? players.length : 0}/2 minimum)`;
+        } else {
+            waitingMessage.style.display = 'none';
+        }
+    }
+
+    function focusNumberInput() {
+        const numberInput = document.getElementById('numberInput');
+        const gameInput = document.getElementById('gameInput');
+        
+        if (numberInput && gameInput && gameInput.style.display === 'flex' && gameState.gameActive) {
+            setTimeout(() => {
+                numberInput.focus();
+            }, 100);
+        }
+    }
+
+    // Socket connection events
+    socket.on('connect', () => {
+        updateConnectionStatus('connected', '🟢 Connected');
+        addMessage('Connected to server');
+    });
+
+    socket.on('disconnect', () => {
+        updateConnectionStatus('disconnected', '🔴 Disconnected');
+        addMessage('Disconnected from server', 'error');
+    });
+
+    socket.on('connect_error', () => {
+        updateConnectionStatus('disconnected', '🔴 Connection Error');
+        addMessage('Failed to connect to server', 'error');
+    });
+
+    // Game event listeners
+    socket.on('room_created', (data) => {
+        gameState.isHost = true;
+        gameState.roomCode = data.roomCode;
+        gameState.players = data.players || [];
+        showGameArea(data);
+        addMessage(`Room created: ${data.roomCode}`, 'system');
+    });
+
+    socket.on('room_joined', (data) => {
+        gameState.roomCode = data.roomCode;
+        gameState.players = data.players || [];
+        showGameArea(data);
+        addMessage(`Joined room: ${data.roomCode}`, 'system');
+    });
+
+    socket.on('player_joined', (data) => {
+        gameState.players = data.players || [];
+        updatePlayersDisplay(data.players);
+        updateWaitingMessage(data.players);
+        if (data.player && data.player.name) {
+            addMessage(`${data.player.name} joined the game`, 'system');
+        }
+    });
+
+    socket.on('player_left', (data) => {
+        gameState.players = data.players || [];
+        updatePlayersDisplay(data.players);
+        updateWaitingMessage(data.players);
+        if (data.player && data.player.name) {
+            addMessage(`${data.player.name} left the game`, 'system');
+        }
+        
+        // Update host status if needed
+        if (data.newHost && data.newHost === socket.id) {
+            gameState.isHost = true;
+            updateHostControls();
+        }
+    });
+
+    socket.on('game_started', (data) => {
+        gameState.gameActive = true;
+        gameState.currentPlayer = data.currentPlayer;
+        gameState.players = data.players || [];
+        
+        const waitingMessage = document.getElementById('waitingMessage');
+        const gameInput = document.getElementById('gameInput');
+        
+        if (waitingMessage) waitingMessage.style.display = 'none';
+        if (gameInput) gameInput.style.display = 'flex';
+        
+        updateGameDisplay(data);
+        addMessage('Game started! Let the counting begin!', 'system');
+        
+        if (data.currentPlayer && data.currentPlayer.name) {
+            const nextNum = (data.gameState && data.gameState.nextExpectedNumber) ? data.gameState.nextExpectedNumber : 1;
+            addMessage(`${data.currentPlayer.name}'s turn to say ${nextNum}`, 'system');
+        }
+        
+        if (data.currentPlayer && data.currentPlayer.id === socket.id) {
+            focusNumberInput();
+        }
+    });
+
+    socket.on('number_processed', (data) => {
+        updateGameDisplay(data);
+        
+        if (data.type === 'success') {
+            addMessage(`${data.player.name} said ${data.number} ✓`, 'player');
+            if (data.currentPlayer && data.nextExpectedNumber) {
+                addMessage(`${data.currentPlayer.name}'s turn to say ${data.nextExpectedNumber}`, 'system');
+            }
+            if (data.currentPlayer && data.currentPlayer.id === socket.id) {
+                focusNumberInput();
+            }
+        } else if (data.type === 'elimination') {
+            if (data.eliminated && data.eliminated.name) {
+                addMessage(`${data.eliminated.name} eliminated! ${data.reason || 'Rule violation'}`, 'error');
+            }
+            if (data.nextExpectedNumber) {
+                addMessage(`Next number: ${data.nextExpectedNumber}`, 'system');
+            }
+        } else if (data.type === 'game_end') {
+            gameState.gameActive = false;
+            const gameInput = document.getElementById('gameInput');
+            if (gameInput) gameInput.style.display = 'none';
+            
+            if (data.winner && data.winner.name) {
+                addMessage(`🎉 ${data.winner.name} wins the game!`, 'system');
+            } else {
+                addMessage('Game ended - no winner', 'system');
+            }
+            
+            if (data.eliminated && data.eliminated.name) {
+                addMessage(`${data.eliminated.name} was eliminated: ${data.reason || 'Rule violation'}`, 'error');
+            }
+        } else if (data.type === 'wrong_sequence') {
+            if (data.player && data.player.name) {
+                addMessage(`${data.player.name} said ${data.actualNumber} but should have said ${data.expectedNumber}`, 'error');
+            }
+        }
+    });
+
+    socket.on('game_reset', (data) => {
+        gameState.gameActive = false;
+        gameState.currentPlayer = null;
+        gameState.players = data.players || [];
+        
+        const waitingMessage = document.getElementById('waitingMessage');
+        const gameInput = document.getElementById('gameInput');
+        
+        if (waitingMessage) waitingMessage.style.display = 'block';
+        if (gameInput) gameInput.style.display = 'none';
+        
+        updateGameDisplay(data);
+        updateWaitingMessage(data.players);
+        addMessage('Game reset by host', 'system');
+    });
+
+    socket.on('error', (data) => {
+        const message = (data && data.message) ? data.message : 'An error occurred';
+        addMessage(message, 'error');
+    });
+
+    // Keyboard event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const numberInput = document.getElementById('numberInput');
+        const playerName = document.getElementById('playerName');
+        const joinPlayerName = document.getElementById('joinPlayerName');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const joinBtn = document.getElementById('joinBtn');
+        
+        if (joinBtn) {
+            joinBtn.addEventListener('click', joinRoom);
+        }
+        
+        if (numberInput) {
+            numberInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitNumber();
+                }
+            });
+        }
+
+        if (playerName) {
+            playerName.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    createRoom();
+                }
+            });
+        }
+
+        if (joinPlayerName) {
+            joinPlayerName.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const roomCode = document.getElementById('roomCodeInput').value.trim();
+                    if (roomCode) {
+                        joinRoom();
+                    } else {
+                        document.getElementById('roomCodeInput').focus();
+                    }
+                }
+            });
+        }
+
+        if (roomCodeInput) {
+            roomCodeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    joinRoom();
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>
